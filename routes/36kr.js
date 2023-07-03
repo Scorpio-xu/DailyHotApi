@@ -3,6 +3,12 @@ const krRouter = new Router();
 const axios = require("axios");
 const { get, set, del } = require("../utils/cacheData");
 
+// 接口信息
+const routerInfo = {
+  title: "36氪",
+  subtitle: "热榜",
+};
+
 // 缓存键名
 const cacheKey = "krData";
 
@@ -46,6 +52,7 @@ krRouter.get("/36kr", async (ctx) => {
           siteId: 1,
           platformId: 2,
         },
+        timestamp: new Date().getTime(),
       });
       data = getData(response.data.data.hotRankList);
       updateTime = new Date().toISOString();
@@ -55,8 +62,7 @@ krRouter.get("/36kr", async (ctx) => {
     ctx.body = {
       code: 200,
       message: "获取成功",
-      title: "36氪",
-      subtitle: "热榜",
+      ...routerInfo,
       from,
       total: data.length,
       updateTime,
@@ -66,8 +72,7 @@ krRouter.get("/36kr", async (ctx) => {
     console.error(error);
     ctx.body = {
       code: 500,
-      title: "36氪",
-      subtitle: "热榜",
+      ...routerInfo,
       message: "获取失败",
     };
   }
@@ -84,6 +89,7 @@ krRouter.get("/36kr/new", async (ctx) => {
         siteId: 1,
         platformId: 2,
       },
+      timestamp: new Date().getTime(),
     });
     const newData = getData(response.data.data.hotRankList);
     updateTime = new Date().toISOString();
@@ -93,8 +99,7 @@ krRouter.get("/36kr/new", async (ctx) => {
     ctx.body = {
       code: 200,
       message: "获取成功",
-      title: "36氪",
-      subtitle: "热榜",
+      ...routerInfo,
       total: newData.length,
       updateTime,
       data: newData,
@@ -112,8 +117,7 @@ krRouter.get("/36kr/new", async (ctx) => {
       ctx.body = {
         code: 200,
         message: "获取成功",
-        title: "36氪",
-        subtitle: "热榜",
+        ...routerInfo,
         total: cachedData.length,
         updateTime,
         data: cachedData,
@@ -122,12 +126,12 @@ krRouter.get("/36kr/new", async (ctx) => {
       // 如果缓存中也没有数据，则返回错误信息
       ctx.body = {
         code: 500,
-        title: "36氪",
-        subtitle: "热榜",
+        ...routerInfo,
         message: "获取失败",
       };
     }
   }
 });
 
+krRouter.info = routerInfo;
 module.exports = krRouter;

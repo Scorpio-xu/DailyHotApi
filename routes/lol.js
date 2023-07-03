@@ -1,52 +1,75 @@
 const Router = require("koa-router");
-const toutiaoRouter = new Router();
+const lolRouter = new Router();
 const axios = require("axios");
 const { get, set, del } = require("../utils/cacheData");
 
 // 接口信息
 const routerInfo = {
-  title: "今日头条",
-  subtitle: "热榜",
+  title: "英雄联盟",
+  subtitle: "更新公告",
 };
 
 // 缓存键名
-const cacheKey = "toutiaoData";
+const cacheKey = "lolData";
 
 // 调用时间
 let updateTime = new Date().toISOString();
 
 // 调用路径
-const url = "https://www.toutiao.com/hot-event/hot-board/?origin=toutiao_pc";
+const url =
+  "https://apps.game.qq.com/cmc/zmMcnTargetContentList?r0=jsonp&page=1&num=16&target=24&source=web_pc&r1=jQuery191002324053053181463_1687855508930&_=1687855508933";
 
 // 数据处理
 const getData = (data) => {
   if (!data) return [];
-  return data.map((v) => {
-    return {
-      id: v.ClusterId,
-      title: v.Title,
-      pic: v.Image.url,
-      hot: v.HotValue,
-      url: `https://www.toutiao.com/trending/${v.ClusterIdStr}/`,
-      mobileUrl: `https://api.toutiaoapi.com/feoffline/amos_land/new/html/main/index.html?topic_id=${v.ClusterIdStr}`,
-    };
-  });
+  const dataList = [];
+  try {
+    const pattern = /jQuery191002324053053181463_1687855508930\((.*?)\)/s;
+    const matchResult = data.match(pattern);
+    const jsonObject = JSON.parse(matchResult[1])["data"].result;
+    jsonObject.forEach((v) => {
+      dataList.push({
+        title: v.sTitle,
+        desc: v.sAuthor,
+        pic: `https:${v.sIMG}`,
+        hot: Number(v.iTotalPlay),
+        url: `https://lol.qq.com/news/detail.shtml?docid=${encodeURIComponent(
+          v.iDocID
+        )}`,
+        mobileUrl: `https://lol.qq.com/news/detail.shtml?docid=${encodeURIComponent(
+          v.iDocID
+        )}`,
+      });
+    });
+    return dataList;
+  } catch (error) {
+    console.error("数据处理出错" + error);
+    return false;
+  }
 };
 
-// 头条热榜
-toutiaoRouter.get("/toutiao", async (ctx) => {
-  console.log("获取头条热榜");
+// 英雄联盟更新公告
+lolRouter.get("/lol", async (ctx) => {
+  console.log("获取英雄联盟更新公告");
   try {
     // 从缓存中获取数据
     let data = await get(cacheKey);
     const from = data ? "cache" : "server";
     if (!data) {
       // 如果缓存中不存在数据
-      console.log("从服务端重新获取头条热榜");
+      console.log("从服务端重新获取英雄联盟更新公告");
       // 从服务器拉取数据
       const response = await axios.get(url);
-      data = getData(response.data.data);
+      data = getData(response.data);
       updateTime = new Date().toISOString();
+      if (!data) {
+        ctx.body = {
+          code: 500,
+          ...routerInfo,
+          message: "获取失败",
+        };
+        return false;
+      }
       // 将数据写入缓存
       await set(cacheKey, data);
     }
@@ -63,21 +86,20 @@ toutiaoRouter.get("/toutiao", async (ctx) => {
     console.error(error);
     ctx.body = {
       code: 500,
-      ...routerInfo,
       message: "获取失败",
     };
   }
 });
 
-// 头条热榜 - 获取最新数据
-toutiaoRouter.get("/toutiao/new", async (ctx) => {
-  console.log("获取头条热榜 - 最新数据");
+// 英雄联盟更新公告 - 获取最新数据
+lolRouter.get("/lol/new", async (ctx) => {
+  console.log("获取英雄联盟更新公告 - 最新数据");
   try {
     // 从服务器拉取最新数据
     const response = await axios.get(url);
-    const newData = getData(response.data.data);
+    const newData = getData(response.data);
     updateTime = new Date().toISOString();
-    console.log("从服务端重新获取头条热榜");
+    console.log("从服务端重新获取英雄联盟更新公告");
 
     // 返回最新数据
     ctx.body = {
@@ -117,5 +139,5 @@ toutiaoRouter.get("/toutiao/new", async (ctx) => {
   }
 });
 
-toutiaoRouter.info = routerInfo;
-module.exports = toutiaoRouter;
+lolRouter.info = routerInfo;
+module.exports = lolRouter;
